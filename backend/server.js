@@ -10,7 +10,7 @@ let salesData = [];
 
 app.use(cors());
 
-fs.createReadStream("../data/cleaned_dataset.csv")
+fs.createReadStream("./data/cleaned_dataset.csv")
     // clean tab and space
     .pipe(parser({
         mapHeaders: ({ header }) => header.trim(),
