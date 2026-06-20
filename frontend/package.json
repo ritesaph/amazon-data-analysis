@@ -1,0 +1,20 @@
+{
+  "name": "amazon-sales-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@fontsource/poppins": "^5.2.7",
+    "@vitejs/plugin-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router": "latest",
+    "recharts": "^3.8.1",
+    "vite": "latest"
+  }
+}
