@@ -12,16 +12,16 @@ const columns = [
 	{ key: "profit", label: "Profit", format: compactCurrency },
 	{ key: "quantity", label: "Products Sold", format: number },
 	{ key: "margin", label: "Margin", format: (value) => percent(value * 100) },
-	{ key: "growth", label: "Growth", format: (value) => percent(value * 100) },
+	{ key: "growth", label: "Growth", format: (value) => value != null ? percent(value * 100) : "—" },
 ];
 
 export default function RegionsTab({ filters }) {
-	const [state, setState] = useState({ rows: [], loading: true });
+	const [state, setState] = useState({ rows: [], growthByRegion: {}, loading: true });
 	const baseUrl = import.meta.env.VITE_API_URL;
 
 	useEffect(() => {
 		const fetchData = async () => {
-			setState({ rows: [], loading: true });
+			setState({ rows: [], growthByRegion: {}, loading: true });
 			const params = new URLSearchParams();
 			if (filters.year) params.append("year", filters.year);
 			if (filters.category) params.append("category", filters.category);
@@ -29,20 +29,20 @@ export default function RegionsTab({ filters }) {
 			try {
 				const response = await fetch(`${baseUrl}/api/region?${params.toString()}`);
 				const result = await response.json();
-				setState({ rows: result.rows, loading: false });
+				setState({ rows: result.rows, growthByRegion: result.growthByRegion, loading: false });
 			} catch (error) {
 				console.error("Error fetching region data:", error);
-				setState({ rows: [], loading: false });
+				setState({ rows: [], growthByRegion: {}, loading: false });
 			}
 		};
 
 		fetchData();
 	}, [filters]);
 
-	const { rows, loading } = state;
+	const { rows, growthByRegion, loading } = state;
 	if (loading) return <div className="loading-state">Loading...</div>;
 
-	const regionRows = groupMetrics(rows, "region");
+	const regionRows = groupMetrics(rows, "region", growthByRegion);
 
 	return (
 		<div className="tab-stack">

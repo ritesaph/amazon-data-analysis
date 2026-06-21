@@ -35,38 +35,36 @@ export function groupBy(rows, key, metric = "revenue") {
   return [...map.entries()].map(([label, value]) => ({ label, value }));
 }
 
-export function groupMetrics(rows, key) {
-  const map = new Map();
-  rows.forEach((row) => {
-    const label = row[key];
-    const item =
-      map.get(label) ||
-      {
-        label,
-        revenue: 0,
-        profit: 0,
-        orders: 0,
-        quantity: 0,
-        discountLoss: 0,
-        ratingTotal: 0,
-        rows: 0,
-      };
-    item.revenue += row.revenue;
-    item.profit += row.profit;
-    item.orders += row.orders;
-    item.quantity += row.quantity;
-    item.discountLoss += row.discountLoss;
-    item.ratingTotal += row.rating;
-    item.rows += 1;
-    map.set(label, item);
-  });
+export function groupMetrics(rows, key, growthByRegion = {}) {
+	const map = new Map();
+	rows.forEach((row) => {
+		const label = row[key];
+		const item = map.get(label) || {
+			label,
+			revenue: 0,
+			profit: 0,
+			orders: 0,
+			quantity: 0,
+			discountLoss: 0,
+			ratingTotal: 0,
+			rows: 0,
+		};
+		item.revenue += row.revenue;
+		item.profit += row.profit;
+		item.orders += row.orders || 0;
+		item.quantity += row.quantity;
+		item.discountLoss += row.discountLoss || 0;
+		item.ratingTotal += row.rating || 0;
+		item.rows += 1;
+		map.set(label, item);
+	});
 
-  return [...map.values()].map((item) => ({
-    ...item,
-    rating: item.rows ? item.ratingTotal / item.rows : 0,
-    margin: item.revenue ? item.profit / item.revenue : 0,
-    growth: item.revenue ? item.profit / item.revenue + 0.09 : 0,
-  }));
+	return [...map.values()].map((item) => ({
+		...item,
+		rating: item.rows ? item.ratingTotal / item.rows : 0,
+		margin: item.revenue ? item.profit / item.revenue : 0,
+		growth: growthByRegion[item.label] ?? null,
+	}));
 }
 
 export function monthlyTrend(rows) {

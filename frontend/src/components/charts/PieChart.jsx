@@ -23,7 +23,7 @@ export default function PieChart({ data }) {
             innerRadius="54%"
             outerRadius="76%"
             paddingAngle={2}
-            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+            label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
             labelLine={false}
           >
             {data.map((item, index) => (
