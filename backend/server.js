@@ -54,12 +54,25 @@ app.get("/api/overview", (req, res) => {
         // make unique label to access trend data
         const label = `${monthNames[d.getMonth()]} ${d.getFullYear().toString().slice(-2)}`;
         
-        if (!acc[label]) acc[label] = { label, revenue: 0, profit: 0 };
+        if (!acc[label]) {
+            acc[label] = { 
+                label, 
+                revenue: 0, 
+                profit: 0,
+                _timestamp: new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+            };
+        }
         acc[label].revenue += parseFloat(item.total_revenue || 0);
         acc[label].profit += parseFloat(item.profit || 0);
         return acc;
     }, {});
-    const trendData = Object.values(trendMap);
+    
+    const trendData = Object.values(trendMap)
+        .sort((a, b) => a._timestamp - b._timestamp)
+        .map(({ _timestamp, ...rest }) => ({
+            ...rest,
+            margin: rest.revenue > 0 ? (rest.profit / rest.revenue) : 0
+        }));
 
     const getGrouped = (field) => Object.entries(filteredData.reduce((acc, item) => {
         if (item[field]) acc[item[field]] = (acc[item[field]] || 0) + parseFloat(item.total_revenue || 0);
@@ -232,33 +245,57 @@ app.get("/api/products", (req, res) => {
 
 app.get("/api/region", (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-
-    const getFirst = (param) => Array.isArray(param) ? param[0] : param;
-
-    const year = getFirst(req.query.year);
-    const category = getFirst(req.query.category);
-
-    let filteredData = salesData;
-
-    const getYear = (dateStr) => {
-        if (!dateStr) return "";
-        return new Date(dateStr).getFullYear().toString();
-    };
-
-    if (year && !year.includes("All")) filteredData = filteredData.filter(item => getYear(item.order_date) === String(year));
-    if (category && !category.includes("All")) filteredData = filteredData.filter(item => item.product_category === category);
-
-    const rows = filteredData.map(item => ({
-        year: getYear(item.order_date),
-        region: item.customer_region,
-        category: item.product_category,
-        paymentMethod: item.payment_method,
-        revenue: parseFloat(item.total_revenue || 0),
-        profit: parseFloat(item.profit || 0),
-        quantity: parseInt(item.quantity_sold || 0),
-    }));
-
-    res.json({ rows });
+ 
+	const getFirst = (param) => Array.isArray(param) ? param[0] : param;
+ 
+	const year = getFirst(req.query.year);
+	const category = getFirst(req.query.category);
+ 
+	const getYear = (dateStr) => {
+		if (!dateStr) return "";
+		return new Date(dateStr).getFullYear();
+	};
+ 
+	let filteredData = salesData;
+	if (category && !category.includes("All")) filteredData = filteredData.filter(item => item.product_category === category);
+ 
+	const selectedYear = (year && !year.includes("All")) ? Number(year) : null;
+ 
+	const allRows = filteredData.map(item => ({
+		year: getYear(item.order_date),
+		region: item.customer_region,
+		category: item.product_category,
+		paymentMethod: item.payment_method,
+		revenue: parseFloat(item.total_revenue || 0),
+		profit: parseFloat(item.profit || 0),
+		quantity: parseInt(item.quantity_sold || 0),
+	}));
+ 
+	const regions = [...new Set(allRows.map(r => r.region))];
+ 
+	const growthByRegion = {};
+	regions.forEach(region => {
+		const regionRows = allRows.filter(r => r.region === region);
+ 
+		let currentYear, priorYear;
+		if (selectedYear) {
+			currentYear = selectedYear;
+			priorYear = selectedYear - 1;
+		} else {
+			const years = [...new Set(regionRows.map(r => r.year))].sort((a, b) => b - a);
+			currentYear = years[0];
+			priorYear = years[1];
+		}
+ 
+		const currentRevenue = regionRows.filter(r => r.year === currentYear).reduce((s, r) => s + r.revenue, 0);
+		const priorRevenue = regionRows.filter(r => r.year === priorYear).reduce((s, r) => s + r.revenue, 0);
+ 
+		growthByRegion[region] = priorRevenue ? (currentRevenue - priorRevenue) / priorRevenue : null;
+	});
+ 
+	const rows = selectedYear ? allRows.filter(r => r.year === selectedYear) : allRows;
+ 
+	res.json({ rows, growthByRegion });
 });
 
 app.listen(PORT, () => {
